@@ -27,7 +27,7 @@
   register: version_file
 
 - name: Get current ansible-link version
-  ansible.builtin.command: "cat {{ ansible_link_dir }}/version.py | grep VERSION | cut -d '\"' -f 2"
+  ansible.builtin.shell: "grep VERSION {{ ansible_link_dir }}/version.py | awk -F'\"' '{print $2}' | tr -d '[:space:]'"
   register: current_version
   changed_when: false
   failed_when: false
