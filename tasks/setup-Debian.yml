@@ -1,0 +1,71 @@
+---
+# tasks file for ansible-link-role
+- name: Ensure required packages are installed
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+      - unzip
+    state: present
+
+- name: Create ansible-link user
+  ansible.builtin.user:
+    name: "{{ ansible_link_user }}"
+    system: yes
+    createhome: no
+
+- name: Create project directory
+  ansible.builtin.file:
+    path: "{{ ansible_link_dir }}"
+    state: directory
+    owner: "{{ ansible_link_user }}"
+    group: "{{ ansible_link_group }}"
+    mode: '0755'
+
+- name: Download ansible-link project
+  ansible.builtin.get_url:
+    url: "{{ ansible_link_repo }}/archive/{{ ansible_link_version }}.zip"
+    dest: "/tmp/ansible-link.zip"
+    mode: '0644'
+
+- name: Unzip project files
+  ansible.builtin.unarchive:
+    src: "/tmp/ansible-link.zip"
+    dest: "{{ ansible_link_dir }}"
+    remote_src: yes
+    owner: "{{ ansible_link_user }}"
+    group: "{{ ansible_link_group }}"
+    mode: '0755'
+    extra_opts: [--strip-components=1]
+
+- name: Remove temporary zip file
+  ansible.builtin.file:
+    path: "/tmp/ansible-link.zip"
+    state: absent
+
+- name: Create Python virtual environment
+  ansible.builtin.pip:
+    virtualenv: "{{ ansible_link_venv }}"
+    virtualenv_command: python3 -m venv
+
+- name: Install project dependencies
+  ansible.builtin.pip:
+    requirements: "{{ ansible_link_dir }}/requirements.txt"
+    virtualenv: "{{ ansible_link_venv }}"
+
+- name: Create systemd service file
+  ansible.builtin.template:
+    src: ansible-link.service.j2
+    dest: "/etc/systemd/system/ansible-link.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart ansible-link service
+
+- name: Ensure ansible-link service is enabled and started
+  ansible.builtin.systemd:
+    name: "ansible-link"
+    enabled: yes
+    daemon-reload: yes
+    state: started

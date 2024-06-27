@@ -1,0 +1,4 @@
+---
+# tasks file for ansible-link-role
+- include_tasks: setup-Debian.yml
+  when: ansible_os_family == 'Debian'

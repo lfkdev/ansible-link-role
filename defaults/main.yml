@@ -1,0 +1,8 @@
+---
+# defaults file for ansible-link-role
+ansible_link_repo: "https://github.com/lfkdev/ansible-link"
+ansible_link_version: "main"
+ansible_link_dir: "/opt/ansible-link"
+ansible_link_venv: "{{ ansible_link_dir }}/.venv"
+ansible_link_user: root
+ansible_link_group: root

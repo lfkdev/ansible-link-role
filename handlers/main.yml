@@ -1,0 +1,6 @@
+---
+# handlers file for ansible-link-role
+- name: Restart ansible-link service
+  ansible.builtin.systemd:
+    name: "ansible-link"
+    state: restarted

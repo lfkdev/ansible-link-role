@@ -1,0 +1,21 @@
+[Unit]
+Description=Ansible Link Service
+After=network.target
+
+[Service]
+Type=simple
+User={{ ansible_link_user }}
+Group={{ ansible_link_group }}
+WorkingDirectory={{ ansible_link_dir }}
+ExecStart={{ ansible_link_venv }}/bin/python {{ ansible_link_dir }}/main.py
+Restart=always
+RestartSec=10
+
+# hardening options in case user runs as root
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
