@@ -1,8 +1,28 @@
 ---
 # defaults file for ansible-link-role
 ansible_link_repo: "https://github.com/lfkdev/ansible-link"
-ansible_link_version: "main"
-ansible_link_dir: "/opt/ansible-link"
+ansible_link_version: "1.2.5"
+ansible_link_dir: "/srv/ansible-link"
 ansible_link_venv: "{{ ansible_link_dir }}/.venv"
 ansible_link_user: root
 ansible_link_group: root
+
+ansible_link_webhook_url: ""
+ansible_link_webhook_type: "slack"
+ansible_link_webhook_timeout: "5"
+
+ansible_link_host: "127.0.0.1"
+ansible_link_port: "5001"
+ansible_link_debug: false
+
+ansible_link_ansible_output: false
+ansible_link_omit_event_data: false
+ansible_link_only_failed_event_data: false
+ansible_link_prometheus_port: 9091
+
+ansible_link_playbook_dir: "/etc/ansible/"
+ansible_link_inventory_file: "/etc/ansible/environments/hosts"
+ansible_link_job_storage_dir: "/var/lib/ansible-link/job-storage"
+ansible_link_log_level: "INFO"
+
+ansible_link_playbook_whitelist: []

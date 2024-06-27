@@ -1,5 +1,11 @@
 ---
 # tasks file for ansible-link-role
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
 - name: Ensure required packages are installed
   ansible.builtin.apt:
     name:
@@ -15,7 +21,44 @@
     system: yes
     createhome: no
 
-- name: Create project directory
+- name: Check if ansible-link is installed
+  ansible.builtin.stat:
+    path: "{{ ansible_link_dir }}/version.py"
+  register: version_file
+
+- name: Get current ansible-link version
+  ansible.builtin.command: "cat {{ ansible_link_dir }}/version.py | grep VERSION | cut -d '\"' -f 2"
+  register: current_version
+  changed_when: false
+  failed_when: false
+  when: version_file.stat.exists
+
+- name: Set facts for version comparison
+  ansible.builtin.set_fact:
+    current_version: "{{ current_version.stdout | default('0.0.0') }}"
+    requested_version: "{{ ansible_link_version }}"
+
+- name: Determine if installation/upgrade is needed
+  ansible.builtin.set_fact:
+    perform_install: "{{ not version_file.stat.exists or current_version != requested_version }}"
+
+- name: Debug version informationcd
+  ansible.builtin.debug:
+    msg: 
+      - "Version file exists: {{ version_file.stat.exists }}"
+      - "Current version: {{ current_version }}"
+      - "Requested version: {{ requested_version }}"
+      - "Perform install: {{ perform_install }}"
+
+- name: Download ansible-link release
+  ansible.builtin.get_url:
+    url: "https://github.com/lfkdev/ansible-link/releases/download/v{{ ansible_link_version }}/ansible-link-{{ ansible_link_version }}.zip"
+    dest: "/tmp/ansible-link-{{ ansible_link_version }}.zip"
+    force: yes
+    mode: '0644'
+  when: perform_install | bool
+
+- name: Ensure project directory exists
   ansible.builtin.file:
     path: "{{ ansible_link_dir }}"
     state: directory
@@ -23,36 +66,60 @@
     group: "{{ ansible_link_group }}"
     mode: '0755'
 
-- name: Download ansible-link project
+- name: Download requirements.txt
   ansible.builtin.get_url:
-    url: "{{ ansible_link_repo }}/archive/{{ ansible_link_version }}.zip"
-    dest: "/tmp/ansible-link.zip"
+    url: "https://raw.githubusercontent.com/lfkdev/ansible-link/v{{ ansible_link_version }}/requirements.txt"
+    dest: "{{ ansible_link_dir }}/requirements.txt"
+    force: yes
     mode: '0644'
+  when: perform_install | bool
 
-- name: Unzip project files
+- name: Create temporary directory for extraction
+  ansible.builtin.file:
+    path: "/tmp/ansible-link-extract"
+    state: directory
+    mode: '0755'
+  when: perform_install | bool
+
+- name: Extract ansible-link release to temporary directory
   ansible.builtin.unarchive:
-    src: "/tmp/ansible-link.zip"
+    src: "/tmp/ansible-link-{{ ansible_link_version }}.zip"
+    dest: "/tmp/ansible-link-extract"
+    remote_src: yes
+  when: perform_install | bool
+
+- name: Find the extracted directory name
+  ansible.builtin.find:
+    paths: "/tmp/ansible-link-extract"
+    file_type: directory
+  register: extracted_dir
+  when: perform_install | bool
+
+- name: Copy contents to final destination
+  ansible.builtin.copy:
+    src: "{{ extracted_dir.files[0].path }}/"
     dest: "{{ ansible_link_dir }}"
     remote_src: yes
     owner: "{{ ansible_link_user }}"
     group: "{{ ansible_link_group }}"
     mode: '0755'
-    extra_opts: [--strip-components=1]
+  when: perform_install | bool
 
-- name: Remove temporary zip file
+- name: Clean up temporary files
   ansible.builtin.file:
-    path: "/tmp/ansible-link.zip"
+    path: "{{ item }}"
     state: absent
+  loop:
+    - "/tmp/ansible-link-{{ ansible_link_version }}.zip"
+    - "/tmp/ansible-link-extract"
+  when: perform_install | bool
 
 - name: Create Python virtual environment
   ansible.builtin.pip:
     virtualenv: "{{ ansible_link_venv }}"
     virtualenv_command: python3 -m venv
-
-- name: Install project dependencies
-  ansible.builtin.pip:
     requirements: "{{ ansible_link_dir }}/requirements.txt"
-    virtualenv: "{{ ansible_link_venv }}"
+  when: perform_install | bool
 
 - name: Create systemd service file
   ansible.builtin.template:
@@ -63,9 +130,26 @@
     mode: '0644'
   notify: Restart ansible-link service
 
+- name: Create configuration file from template
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ ansible_link_dir }}/config.yml"
+    owner: "{{ ansible_link_user }}"
+    group: "{{ ansible_link_group }}"
+    mode: '0644'
+  notify: Restart ansible-link service
+
 - name: Ensure ansible-link service is enabled and started
   ansible.builtin.systemd:
     name: "ansible-link"
     enabled: yes
     daemon-reload: yes
     state: started
+
+- name: Clean up temporary files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/ansible-link-{{ ansible_link_version }}.zip"
+  when: perform_install | bool

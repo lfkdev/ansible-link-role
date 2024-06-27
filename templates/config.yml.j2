@@ -1,0 +1,37 @@
+####################################################################
+# ANSIBLE LINK CONFIGURATION                                       #
+# docs:                                                            #
+#   github.com/lfkdev/ansible-link                                 #
+#   ansible-runner.readthedocs.io/_/downloads/en/stable/pdf/       #
+####################################################################
+# {{ansible_managed}}
+
+# webhook
+{% if ansible_link_webhook_url is defined %}
+webhook:
+  url: "{{ansible_link_webhook_url}}"
+  type: "{{ansible_link_webhook_type}}"
+  timeout: "{{ansible_link_webhook_timeout}}"
+{% endif %}
+
+# flask
+host: {{ansible_link_host}}
+port: {{ansible_link_port}}
+debug: {{ansible_link_debug}}
+
+# ansible-runner
+suppress_ansible_output: {{ansible_link_ansible_output}}
+omit_event_data: {{ansible_link_omit_event_data}}
+only_failed_event_data: {{ansible_link_only_failed_event_data}}
+
+# prometheus
+metrics_port: {{ansible_link_prometheus_port}}
+
+# general
+playbook_dir: "{{ansible_link_playbook_dir}}"
+inventory_file: "{{ansible_link_inventory_file}}"
+job_storage_dir: "{{ansible_link_job_storage_dir}}"
+log_level: "{{ansible_link_log_level}}"
+
+# ansible-link
+playbook_whitelist: {{ ansible_link_playbook_whitelist | to_yaml }}
