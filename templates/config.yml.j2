@@ -11,7 +11,7 @@
 webhook:
   url: "{{ansible_link_webhook_url}}"
   type: "{{ansible_link_webhook_type}}"
-  timeout: "{{ansible_link_webhook_timeout}}"
+  timeout: {{ansible_link_webhook_timeout}}
 {% endif %}
 
 # flask
